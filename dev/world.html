@@ -1,0 +1,16 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<canvas id="c" style="width:100vw;height:100vh;display:block"></canvas>
+<script type="module">
+import { World } from '../src/client/world/World.ts';
+import { randomAvatar } from '../src/shared/avatar.ts';
+const cv = document.getElementById('c');
+const q = new URLSearchParams(location.search);
+const w = new World(cv, 'me', { onMove(){}, onAction(){}, onTapPlayer(){}, onNearby(){}, onInteract(){}, onRoom(){} });
+const players = [];
+const spots = q.get('spots') ? JSON.parse(q.get('spots')) : [[22,12],[20,11],[24,11],[7,14],[9,15],[5,15],[21,24],[34,7],[36,13],[8,22]];
+spots.forEach(([x,y],i)=>players.push({id:i?'p'+i:'me', userId:'u'+i, name:['Umar','Zara','Leo','Amaka','Kenji','Sofia','Dre','Mia','Tobi','Ivy'][i%10], avatar: randomAvatar(), x:x+0.5,y:y+0.5,dir:'down',moving:false,action: (x<14&&y>10)?'dance':'idle', danceMove:i, held: i%3===0?'drink':'none', isHost:i===0, connected:true}));
+w.setPlayers(players);
+setTimeout(()=>{ w.showBubble('p1','omg this party is so fun 🎉'); w.showEmote('p2','laugh'); }, 300);
+if (q.get('zoom')) w.zoomBy(+q.get('zoom'));
+window.w = w;
+</script></body></html>

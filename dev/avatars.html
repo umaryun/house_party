@@ -1,0 +1,19 @@
+<!doctype html><html><body style="margin:0;background:#2a2346">
+<canvas id="c" width="1200" height="700"></canvas>
+<script type="module">
+import { drawAvatar } from '../src/client/world/avatarRender.ts';
+import { randomAvatar, HAIR_STYLES, HATS } from '../src/shared/avatar.ts';
+const c = document.getElementById('c').getContext('2d');
+const dirs=['down','down','left','right','up'];
+const anims=['idle','walk','dance','sit','swim'];
+let i=0;
+for (let row=0; row<4; row++) for (let col=0; col<14; col++) {
+  const a = randomAvatar();
+  a.hairStyle = HAIR_STYLES[(i)%HAIR_STYLES.length];
+  a.hat = row===3 ? HATS[col%HATS.length] : 'none';
+  const dir = row===2 ? dirs[col%5] : 'down';
+  const anim = row===1 ? anims[col%5] : 'idle';
+  drawAvatar(c, a, 50+col*82, 110+row*160, 1.6, {dir, anim, t: 0.4+col*0.2, danceMove: col, emote: row===2 && col>9 ? ['wave','laugh','cry','heart'][col-10] : null});
+  i++;
+}
+</script></body></html>
