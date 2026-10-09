@@ -77,6 +77,8 @@ export class World {
   private room: Room | undefined;
   private tapMarker: { x: number; y: number; start: number } | null = null;
   keysEnabled = true;
+  /** When set, the camera looks at this tile position with a fixed zoom instead of following the player. */
+  cinematic: { x: number; y: number; zoom: number } | null = null;
   beat: () => number = () => 0;
   private pointers = new Map<number, { x: number; y: number }>();
   private pinchStart: { d: number; zoom: number } | null = null;
@@ -216,21 +218,25 @@ export class World {
 
   // ───────────── input ─────────────
 
+  /** Layout size of the canvas, unaffected by CSS transforms on ancestors. */
+  private viewSize() {
+    return { width: this.canvas.clientWidth, height: this.canvas.clientHeight };
+  }
+
   private resize = () => {
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.viewSize();
     this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     this.canvas.width = Math.max(1, Math.round(rect.width * this.dpr));
     this.canvas.height = Math.max(1, Math.round(rect.height * this.dpr));
     const vw = rect.width;
     const vh = rect.height;
-    // Show roughly 12 tiles across on phones and more on desktops.
     // Phones see ~8.5 tiles across so characters stay big; desktops see ~26.
     this.baseZoom = Math.max(1.3, Math.min(2.4, Math.min(vw / (T * 8.5), vh / (T * 8))));
     if (vw > 900) this.baseZoom = Math.max(1.2, Math.min(2, vw / (T * 26)));
   };
 
   private get zoom() {
-    return this.baseZoom * this.userZoom;
+    return this.cinematic ? this.cinematic.zoom : this.baseZoom * this.userZoom;
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -428,8 +434,11 @@ export class World {
       p.rx += (p.x - p.rx) * k;
       p.ry += (p.y - p.ry) * k;
     }
-    // camera follow
-    if (me) {
+    // camera follow (a cinematic camera, used for spectating/trailers, takes priority)
+    if (this.cinematic) {
+      this.cam.x = this.cinematic.x * T;
+      this.cam.y = this.cinematic.y * T;
+    } else if (me) {
       const k = Math.min(1, dt * 6);
       this.cam.x += (me.rx * T - this.cam.x) * k;
       this.cam.y += (me.ry * T - 10 - this.cam.y) * k;
@@ -496,7 +505,7 @@ export class World {
   }
 
   private clampCamera() {
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.viewSize();
     const hw = rect.width / 2 / this.zoom;
     const hh = rect.height / 2 / this.zoom;
     const W = MAP_W * T;
@@ -527,7 +536,7 @@ export class World {
 
   private render() {
     const c = this.c;
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.viewSize();
     const z = this.zoom * this.dpr;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.fillStyle = '#0E0A1F';

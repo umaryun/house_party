@@ -1,0 +1,385 @@
+html,
+body {
+  margin: 0;
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  background: #0e0a1f;
+}
+
+#stage {
+  position: relative;
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  font-family: var(--font);
+  color: #fff8f0;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  overflow: hidden;
+}
+
+.bg-party {
+  background:
+    radial-gradient(1100px 800px at 0% 0%, rgba(255, 77, 141, 0.45), transparent 60%),
+    radial-gradient(900px 800px at 100% 20%, rgba(46, 196, 241, 0.32), transparent 60%),
+    radial-gradient(1000px 900px at 50% 110%, rgba(155, 93, 229, 0.55), transparent 60%),
+    linear-gradient(180deg, #1a1033, #12092a);
+}
+
+.bg-night {
+  background:
+    radial-gradient(900px 700px at 50% 40%, rgba(77, 107, 255, 0.25), transparent 70%),
+    linear-gradient(180deg, #0b0820, #120a2c);
+}
+
+.abs {
+  position: absolute;
+}
+
+.center-x {
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+/* ───── type ───── */
+
+.mega {
+  font-family: var(--display);
+  font-size: 128px;
+  line-height: 0.92;
+  color: #ffd23f;
+  text-shadow:
+    0 6px 0 #c92a66,
+    0 12px 0 #5a1a6e,
+    0 24px 50px rgba(0, 0, 0, 0.55);
+}
+
+.mega .pink {
+  color: #ff4d8d;
+  text-shadow:
+    0 6px 0 #8a1d4a,
+    0 12px 0 #3b1050,
+    0 24px 50px rgba(0, 0, 0, 0.55);
+}
+
+.head {
+  font-family: var(--display);
+  font-size: 86px;
+  line-height: 1;
+  color: #fff;
+  text-shadow:
+    0 5px 0 rgba(0, 0, 0, 0.35),
+    0 14px 40px rgba(0, 0, 0, 0.5);
+  padding: 0 70px;
+}
+
+.head .y {
+  color: #ffd23f;
+}
+
+.head .p {
+  color: #ff4d8d;
+}
+
+.head .c {
+  color: #2ec4f1;
+}
+
+.sub {
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 44px;
+  color: #fff;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  padding: 0 90px;
+}
+
+.pov {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 64px;
+  background: #ff4d8d;
+  color: #fff;
+  border-radius: 22px;
+  padding: 6px 30px 10px;
+  box-shadow: 0 8px 0 #c92a66;
+  transform: rotate(-3deg);
+}
+
+.word {
+  display: inline-block;
+  white-space: pre;
+}
+
+.pill-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--display);
+  font-size: 66px;
+  padding: 18px 44px 22px;
+  border-radius: 999px;
+  background: rgba(20, 12, 46, 0.86);
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ───── hook map ───── */
+
+.map-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.13) 3px, transparent 3.5px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse 70% 45% at 50% 52%, #000 40%, transparent 75%);
+}
+
+.friend {
+  position: absolute;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.friend .ring {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #4b2f8f, #241547);
+  border: 7px solid #ffd23f;
+  box-shadow: 0 0 0 10px rgba(255, 210, 63, 0.18), 0 20px 50px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.friend .ring img {
+  width: 100%;
+  height: 100%;
+}
+
+.friend .city {
+  font-weight: 700;
+  font-size: 34px;
+  background: rgba(20, 12, 46, 0.9);
+  padding: 6px 20px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.house-icon {
+  position: absolute;
+  left: 340px;
+  top: 760px;
+  width: 400px;
+  height: 400px;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* ───── phones ───── */
+
+.phone {
+  position: absolute;
+  border-radius: 64px;
+  background: #0b0816;
+  padding: 16px;
+  box-shadow:
+    0 0 0 4px #3b2d52,
+    0 40px 90px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+.phone .screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50px;
+  overflow: hidden;
+  background: #0e0a1f;
+}
+
+.phone .notch {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  width: 34%;
+  height: 34px;
+  transform: translateX(-50%);
+  background: #0b0816;
+  border-radius: 20px;
+  z-index: 20;
+}
+
+.app-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 390px;
+  height: 845px;
+  transform-origin: 0 0;
+  overflow: hidden;
+  font-size: 16px;
+}
+
+.app-frame canvas.world {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.city-tag {
+  position: absolute;
+  z-index: 30;
+  font-weight: 700;
+  font-size: 32px;
+  background: #ffd23f;
+  color: #2a1a00;
+  padding: 6px 18px;
+  border-radius: 999px;
+  box-shadow: 0 6px 0 #d9a400, 0 10px 30px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+/* ───── creator ───── */
+
+.orbit {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 34px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 3px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(6px);
+}
+
+.orbit img {
+  width: 128px;
+  height: 128px;
+}
+
+.orbit.swatch-o {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 6px solid #fff;
+}
+
+.feature-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 38px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  margin: 8px;
+}
+
+.sparkle {
+  position: absolute;
+  font-size: 60px;
+}
+
+/* ───── games ───── */
+
+.game-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  font-family: var(--display);
+  font-size: 76px;
+  padding: 14px 44px 20px;
+  border-radius: 34px;
+  color: #fff;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.3), 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.stamp {
+  position: absolute;
+  font-family: var(--display);
+  font-size: 110px;
+  color: #ff4d6d;
+  border: 12px solid #ff4d6d;
+  border-radius: 30px;
+  padding: 6px 40px 14px;
+  transform: rotate(-12deg);
+  background: rgba(20, 8, 30, 0.85);
+  z-index: 30;
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--display);
+  font-size: 64px;
+  padding: 30px 64px 36px;
+  border-radius: 40px;
+  background: #ffd23f;
+  color: #3a2200;
+  box-shadow: 0 12px 0 #d9a400, 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+.confetti-v {
+  position: absolute;
+  width: 18px;
+  height: 30px;
+  border-radius: 5px;
+}
+
+.toast-v {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #2a1a55;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-left: 10px solid #3ddc97;
+  border-radius: 26px;
+  padding: 14px 28px 14px 14px;
+  font-weight: 700;
+  font-size: 34px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  width: 560px;
+}
+
+.toast-v img {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #33216a;
+}
+
+/* The video viewport is 1080px wide, so force the app's phone layout inside mockups. */
+.app-frame .draw-layout {
+  flex-direction: column;
+}
+.app-frame .draw-layout .side {
+  width: auto;
+  border-left: 0;
+}
+.app-frame .game-head .gt h2 {
+  font-size: 19px;
+}
+.app-frame {
+  --safe-t: 24px;
+}
