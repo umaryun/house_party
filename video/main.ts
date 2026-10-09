@@ -22,6 +22,17 @@ declare global {
 
 export const DURATION = 40;
 const stage = document.getElementById('stage')!;
+// ?format=landscape renders a 16:9 cut (YouTube, X, Product Hunt); default is 9:16 for TikTok/Reels/Shorts.
+const LAND = new URLSearchParams(location.search).get('format') === 'landscape';
+const SW = LAND ? 1920 : 1080;
+const SH = LAND ? 1080 : 1920;
+const L = <T>(vertical: T, landscape: T): T => (LAND ? landscape : vertical);
+for (const e of [document.documentElement, document.body, stage]) {
+  e.style.width = `${SW}px`;
+  e.style.height = `${SH}px`;
+}
+/** Left text column used by landscape layouts. */
+const COL = 'left:0;right:900px;';
 const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out', duration: 0.45 } });
 const updaters: ((t: number) => void)[] = [];
 const events: { t: number; fn: () => void; done: boolean }[] = [];
@@ -39,6 +50,8 @@ function el<T extends HTMLElement = HTMLElement>(html: string, parent: HTMLEleme
 
 function scene(start: number, end: number, cls = '', z = 1) {
   const s = el(`<div class="scene ${cls}" style="z-index:${z}"></div>`);
+  // A zero-time set isn't applied when seeking to t=0, so show the opening scene directly.
+  if (start === 0) gsap.set(s, { visibility: 'visible' });
   tl.set(s, { visibility: 'visible' }, start);
   tl.set(s, { visibility: 'hidden' }, end);
   return s;
@@ -143,19 +156,28 @@ const emote = (t: number, id: string, e: string) => at(t, () => allWorlds((w) =>
 {
   const s = scene(0, 3.0, 'bg-night', 2);
   el('<div class="map-dots"></div>', s);
-  const pov = el('<div class="abs center-x" style="top:170px"><span class="pov">POV:</span></div>', s);
-  const line = el('<div class="abs center-x head" style="top:290px"></div>', s);
-  words(line, 'your friends live in <span class="y">4 different</span> countries 🌍', 0, 0.0);
+  const pov = el(`<div class="abs center-x" style="top:${L(170, 60)}px"><span class="pov">POV:</span></div>`, s);
+  const line = el(`<div class="abs center-x head" style="top:${L(290, 170)}px"></div>`, s);
+  // Fully visible on frame 0 for sound-off viewers and thumbnails.
+  gsap.set(words(line, 'your friends live in <span class="y">4 different</span> countries 🌍', 0, 0.0), { autoAlpha: 1, y: 0, scale: 1 });
   gsap.set(pov, { rotation: -3 });
   // Visible on frame 0 for sound-off viewers; just a tiny settle.
   tl.fromTo(line, { scale: 1.06 }, { scale: 1, duration: 0.5, immediateRender: false }, 0);
 
-  const spots: [string, string, number, number][] = [
-    ['umar', '🇳🇬 Lagos', 80, 690],
-    ['zara', '🇬🇧 London', 740, 640],
-    ['leo', '🇨🇦 Toronto', 110, 1230],
-    ['amaka', '🇦🇪 Dubai', 720, 1280],
-  ];
+  const spots: [string, string, number, number][] = L(
+    [
+      ['umar', '🇳🇬 Lagos', 80, 690],
+      ['zara', '🇬🇧 London', 740, 640],
+      ['leo', '🇨🇦 Toronto', 110, 1230],
+      ['amaka', '🇦🇪 Dubai', 720, 1280],
+    ],
+    [
+      ['umar', '🇳🇬 Lagos', 230, 330],
+      ['zara', '🇬🇧 London', 1450, 310],
+      ['leo', '🇨🇦 Toronto', 420, 720],
+      ['amaka', '🇦🇪 Dubai', 1280, 720],
+    ],
+  );
   const friends = spots.map(([id, city, x, y], i) => {
     const f = el(`<div class="friend" style="left:${x}px;top:${y}px"><div class="ring"><img src="${portrait(id, 220)}"></div><div class="city">${city}</div></div>`, s);
     pop(f, 0.12 + i * 0.16, {}, { y: 40 });
@@ -164,7 +186,7 @@ const emote = (t: number, id: string, e: string) => at(t, () => allWorlds((w) =>
     return f;
   });
   // swap the line
-  const line2 = el('<div class="abs center-x head" style="top:290px"></div>', s);
+  const line2 = el(`<div class="abs center-x head" style="top:${L(290, 170)}px"></div>`, s);
   tl.to(line, { autoAlpha: 0, y: -40, duration: 0.2, ease: 'power2.in' }, 1.45);
   words(line2, '…but it\'s <span class="p">party night</span> 🎉', 1.55, 0.08);
   sfx(1.55, 'swoosh', 0.6);
@@ -174,12 +196,13 @@ const emote = (t: number, id: string, e: string) => at(t, () => allWorlds((w) =>
     `<svg class="house-icon" viewBox="0 0 64 64"><path d="M8 30 32 9l24 21v23a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3z" fill="#FF4D8D" stroke="#3b1050" stroke-width="1.6"/><rect x="26" y="38" width="12" height="18" rx="2" fill="#FFD23F" stroke="#3b1050" stroke-width="1.2"/><rect x="14" y="34" width="8" height="8" rx="1.5" fill="#FFE8A0"/><rect x="42" y="34" width="8" height="8" rx="1.5" fill="#FFE8A0"/><circle cx="50" cy="12" r="4" fill="#2EC4F1"/><text x="44" y="24" font-size="8">🎵</text></svg>`,
     s,
   );
+  if (LAND) Object.assign(house.style, { left: '760px', top: '420px' });
   pop(house, 2.05, { duration: 0.45 }, { scale: 0.2, rotation: -20 });
   sfx(2.05, 'pop', 1);
   friends.forEach((f, i) => {
-    tl.to(f, { x: 540 - (f.offsetLeft + 115), y: 960 - (f.offsetTop + 100), scale: 0.15, autoAlpha: 0, duration: 0.45, ease: 'power3.in' }, 2.15 + i * 0.05);
+    tl.to(f, { x: L(540, 960) - (f.offsetLeft + 115), y: L(960, 620) - (f.offsetTop + 100), scale: 0.15, autoAlpha: 0, duration: 0.45, ease: 'power3.in' }, 2.15 + i * 0.05);
   });
-  tl.to(house, { scale: 9, y: 520, duration: 0.55, ease: 'power3.in' }, 2.5);
+  tl.to(house, { scale: 9, y: L(520, 800), duration: 0.55, ease: 'power3.in' }, 2.5);
   tl.to([pov, line2], { autoAlpha: 0, y: -80, duration: 0.3, ease: 'power2.in' }, 2.5);
   sfx(2.45, 'riser', 0.9);
 }
@@ -189,7 +212,7 @@ const emote = (t: number, id: string, e: string) => at(t, () => allWorlds((w) =>
 const worldLayer = el('<div class="scene" style="z-index:1"></div>');
 tl.set(worldLayer, { visibility: 'visible' }, 3.0).set(worldLayer, { visibility: 'hidden' }, 8.0);
 tl.set(worldLayer, { visibility: 'visible' }, 20.0).set(worldLayer, { visibility: 'hidden' }, 26.0);
-const mainCanvas = el<HTMLCanvasElement>('<canvas class="world" style="position:absolute;inset:0;width:1080px;height:1920px"></canvas>', worldLayer);
+const mainCanvas = el<HTMLCanvasElement>(`<canvas class="world" style="position:absolute;left:0;top:0;width:${SW}px;height:${SH}px"></canvas>`, worldLayer);
 const mainWorld = makeWorld(mainCanvas, '__director');
 const cam = { x: 22.3, y: 10.4, zoom: 3.3 };
 updaters.push(() => {
@@ -219,19 +242,24 @@ function walk(id: string, from: [number, number], to: [number, number], t0: numb
   // camera: tight on the living room crowd, then pull back to the whole dollhouse
   tl.set(cam, { x: 22.3, y: 10.3, zoom: 3.4 }, 3.0);
   tl.to(cam, { x: 22.0, y: 10.6, zoom: 3.0, duration: 1.35, ease: 'sine.inOut' }, 3.0);
-  tl.to(cam, { x: 22, y: 15.5, zoom: 0.745, duration: 1.25, ease: 'power3.inOut' }, 4.35);
-  tl.to(cam, { zoom: 0.77, duration: 2.4, ease: 'sine.inOut' }, 5.6);
+  tl.to(cam, { x: 22, y: 15.5, zoom: L(0.745, 0.92), duration: 1.25, ease: 'power3.inOut' }, 4.35);
+  tl.to(cam, { zoom: L(0.77, 0.95), duration: 2.4, ease: 'sine.inOut' }, 5.6);
+  if (LAND) {
+    // slide the dollhouse right to make room for the logo
+    tl.to(mainCanvas, { x: 270, duration: 1.25, ease: 'power3.inOut' }, 4.35);
+    tl.set(mainCanvas, { x: 0 }, 19.9);
+  }
   bubble(3.12, 'tobi', 'omg you actually came 🥹');
   emote(3.3, 'umar', 'party');
   bubble(3.65, 'kenji', 'this house is unreal');
   emote(3.75, 'jay', 'laugh');
   walk('kenji', [20.0, 12.2], [22.4, 12.6], 3.9, 5.2);
 
-  const logo = el('<div class="abs center-x mega" style="top:250px;font-size:150px">HOUSE<br><span class="pink">PARTY</span></div>', s);
+  const logo = el(`<div class="abs center-x mega" style="${L('', 'left:0;right:1340px;')}top:${L(250, 280)}px;font-size:${L(150, 130)}px">HOUSE<br><span class="pink">PARTY</span></div>`, s);
   pop(logo, 5.0, { duration: 0.6, ease: 'back.out(1.8)' }, { scale: 2.4, rotation: -8 });
   tl.set(logo, { rotation: -3 }, 5.6);
   sfx(4.98, 'impact', 0.9);
-  const tag = el('<div class="abs center-x sub" style="top:1360px;font-size:54px;line-height:1.25"></div>', s);
+  const tag = el(`<div class="abs center-x sub" style="${L('', 'left:0;right:1340px;padding:0 30px;')}top:${L(1360, 600)}px;font-size:${L(54, 46)}px;line-height:1.25"></div>`, s);
   words(tag, 'Your friends. <span style="color:#FFD23F">One house.</span> Any phone.', 5.7, 0.09);
   tl.to(logo, { scale: 1.04, duration: 0.25, yoyo: true, repeat: 7, ease: 'sine.inOut' }, 6.0);
 }
@@ -247,14 +275,22 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
 {
   const s = scene(8.0, 12.0, 'bg-party', 4);
   cut(8.0, s);
-  const head = el('<div class="abs center-x head" style="top:150px"></div>', s);
+  const head = el(`<div class="abs center-x head" style="top:${L(150, 60)}px"></div>`, s);
   words(head, '<span class="y">4 countries.</span> 1 house.', 8.05, 0.1);
-  const views: [string, string, number, number, number][] = [
-    ['umar', '🇳🇬 Lagos', 95, 380, -4],
-    ['leo', '🇨🇦 Toronto', 585, 400, 3],
-    ['amaka', '🇦🇪 Dubai', 105, 1080, 3],
-    ['zara', '🇬🇧 London', 590, 1100, -3],
-  ];
+  const views: [string, string, number, number, number][] = L(
+    [
+      ['umar', '🇳🇬 Lagos', 95, 380, -4],
+      ['leo', '🇨🇦 Toronto', 585, 400, 3],
+      ['amaka', '🇦🇪 Dubai', 105, 1080, 3],
+      ['zara', '🇬🇧 London', 590, 1100, -3],
+    ],
+    [
+      ['umar', '🇳🇬 Lagos', 206, 250, -3],
+      ['leo', '🇨🇦 Toronto', 598, 270, 2],
+      ['amaka', '🇦🇪 Dubai', 990, 250, -2],
+      ['zara', '🇬🇧 London', 1382, 270, 3],
+    ],
+  );
   const scale = 300 / 390;
   views.forEach(([id, city, x, y, rot], i) => {
     const { ph, app } = phone(s, x, y, 332, scale);
@@ -287,7 +323,7 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
   emote(11.1, 'amaka', 'heart');
   emote(11.15, 'zara', 'clap');
   sfx(10.75, 'click', 0.8);
-  const cap = el('<div class="abs center-x sub" style="top:1790px;font-size:40px">same party · live · from anywhere</div>', s);
+  const cap = el(`<div class="abs center-x sub" style="top:${L(1790, 985)}px;font-size:40px">same party · live · from anywhere</div>`, s);
   pop(cap, 9.2, {}, { scale: 0.8, y: 20 });
 }
 
@@ -296,7 +332,7 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
 {
   const s = scene(12.0, 17.0, 'bg-party', 5);
   cut(12.0, s);
-  const head = el('<div class="abs center-x head" style="top:150px"></div>', s);
+  const head = el(`<div class="abs center-x head" style="top:${L(150, 50)}px"></div>`, s);
   words(head, 'Make a character that\'s <span class="y">actually you</span>', 12.05, 0.08);
 
   const me = CAST.umar;
@@ -312,9 +348,10 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
   ];
   const labels = ['', 'hair ✂️', 'color 🎨', 'outfit 👕', 'glasses 😎', 'hats 👑', 'headphones 🎧', 'you ✨'];
   const changeT = (i: number) => 12.55 + i * 0.5;
-  const cv = el<HTMLCanvasElement>('<canvas width="1000" height="1000" style="position:absolute;left:40px;top:430px;width:1000px;height:1000px"></canvas>', s);
+  const CS = L(1000, 820);
+  const cv = el<HTMLCanvasElement>(`<canvas width="${CS}" height="${CS}" style="position:absolute;left:${L(40, 550)}px;top:${L(430, 180)}px;width:${CS}px;height:${CS}px"></canvas>`, s);
   const c = cv.getContext('2d')!;
-  const glow = el('<div class="abs" style="left:190px;top:1240px;width:700px;height:140px;border-radius:50%;background:radial-gradient(closest-side, rgba(255,210,63,0.45), transparent)"></div>', s);
+  const glow = el(`<div class="abs" style="left:${L(190, 680)}px;top:${L(1240, 820)}px;width:${L(700, 560)}px;height:${L(140, 120)}px;border-radius:50%;background:radial-gradient(closest-side, rgba(255,210,63,0.45), transparent)"></div>`, s);
   s.insertBefore(glow, cv);
   updaters.push((t) => {
     if (t < 12 || t > 17) return;
@@ -322,12 +359,12 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
     for (let i = 1; i < looks.length; i++) if (t >= changeT(i - 1)) idx = i;
     const since = idx ? t - changeT(idx - 1) : 1;
     const squash = since < 0.25 ? 1 + Math.sin((since / 0.25) * Math.PI) * 0.12 : 1;
-    c.clearRect(0, 0, 1000, 1000);
+    c.clearRect(0, 0, CS, CS);
     c.save();
-    c.translate(500, 860);
+    c.translate(CS / 2, CS * 0.86);
     c.scale(1 / squash, squash);
     const dancing = t > 16.0;
-    drawAvatar(c, looks[idx], 0, 0, 12, {
+    drawAvatar(c, looks[idx], 0, 0, CS * 0.012, {
       dir: 'down',
       anim: dancing ? 'dance' : 'idle',
       t,
@@ -337,14 +374,18 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
     c.restore();
   });
   // option bubbles orbiting around the character
+  const tpos = L(
+    [[70, 520], [860, 470], [50, 1000], [870, 930], [110, 1330], [820, 1350]],
+    [[330, 250], [1440, 230], [180, 520], [1590, 500], [340, 790], [1430, 780]],
+  );
   const thumbs: [string, number, number][] = [
-    [avatarPortrait({ ...me, hairStyle: 'braids' }, 128), 70, 520],
-    [avatarPortrait({ ...me, hat: 'cowboy', hatColor: '#8B5E3C' }, 128), 860, 470],
-    [avatarPortrait({ ...me, hairStyle: 'mohawk', hairColor: '#2BC79F' }, 128), 50, 1000],
-    [avatarPortrait({ ...me, glasses: 'stars' }, 128), 870, 930],
-    [avatarPortrait({ ...me, hat: 'party', hatColor: '#9B5DE5' }, 128), 110, 1330],
-    [avatarPortrait({ ...me, hairStyle: 'bun', hairColor: '#FF6FA8' }, 128), 820, 1350],
-  ];
+    avatarPortrait({ ...me, hairStyle: 'braids' }, 128),
+    avatarPortrait({ ...me, hat: 'cowboy', hatColor: '#8B5E3C' }, 128),
+    avatarPortrait({ ...me, hairStyle: 'mohawk', hairColor: '#2BC79F' }, 128),
+    avatarPortrait({ ...me, glasses: 'stars' }, 128),
+    avatarPortrait({ ...me, hat: 'party', hatColor: '#9B5DE5' }, 128),
+    avatarPortrait({ ...me, hairStyle: 'bun', hairColor: '#FF6FA8' }, 128),
+  ].map((src, i) => [src, tpos[i][0], tpos[i][1]]);
   thumbs.forEach(([src, x, y], i) => {
     const o = el(`<div class="orbit" style="left:${x}px;top:${y}px"><img src="${src}"></div>`, s);
     pop(o, 12.3 + i * 0.1, {}, { scale: 0.2, rotation: i % 2 ? 30 : -30 });
@@ -352,11 +393,11 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
   });
   const swatches = ['#FF4D6D', '#FFD23F', '#2EC4F1', '#3DDC97', '#9B5DE5'];
   swatches.forEach((col, i) => {
-    const o = el(`<div class="orbit swatch-o" style="left:${300 + i * 110}px;top:1540px;background:${col}"></div>`, s);
+    const o = el(`<div class="orbit swatch-o" style="left:${L(300 + i * 110, 1260)}px;top:${L(1540, 270 + i * 110)}px;background:${col}"></div>`, s);
     pop(o, 12.6 + i * 0.06, {}, { scale: 0, y: 60 });
   });
   // labels for each change
-  const lab = el('<div class="abs center-x" style="top:400px"><span class="pill-cap" style="font-size:54px"></span></div>', s);
+  const lab = el(`<div class="abs center-x" style="top:${L(400, 165)}px"><span class="pill-cap" style="font-size:${L(54, 46)}px"></span></div>`, s);
   const labSpan = lab.querySelector('span')!;
   gsap.set(lab, { autoAlpha: 0 });
   for (let i = 1; i < looks.length; i++) {
@@ -365,7 +406,7 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
     tl.fromTo(lab, { autoAlpha: 1, scale: 1.35 }, { scale: 1, duration: 0.3, ease: 'back.out(3)', immediateRender: false }, t);
     sfx(t, i === looks.length - 1 ? 'sparkle' : 'pop', 0.8);
   }
-  const chips = el('<div class="abs center-x" style="top:1680px;padding:0 80px"></div>', s);
+  const chips = el(`<div class="abs center-x" style="top:${L(1680, 975)}px;padding:0 80px"></div>`, s);
   ['14 hairstyles', 'outfits', 'hats & glasses', 'every skin tone'].forEach((txt, i) => {
     const ch = el(`<span class="feature-chip">${txt}</span>`, chips);
     pop(ch, 16.0 + i * 0.1, {}, { scale: 0.3, y: 40 });
@@ -374,15 +415,16 @@ function phone(parent: HTMLElement, x: number, y: number, w: number, appScale: n
 
 // ───────────────────────── S5 · Invite (17–20s) ─────────────────────────
 
-const APP_SCALE = 618 / 390;
+const APP_SCALE = L(618 / 390, 1.12);
 function bigPhone(parent: HTMLElement, top = 420) {
+  if (LAND) return phone(parent, 1200, (SH - (845 * APP_SCALE + 32)) / 2, 390 * APP_SCALE + 32, APP_SCALE);
   return phone(parent, (1080 - 650) / 2, top, 650, APP_SCALE);
 }
 
 {
   const s = scene(17.0, 20.0, 'bg-party', 6);
   cut(17.0, s);
-  const head = el('<div class="abs center-x head" style="top:150px"></div>', s);
+  const head = el(`<div class="abs center-x head" style="${L('', COL + 'font-size:104px;')}top:${L(150, 230)}px"></div>`, s);
   words(head, 'Send a code. <span class="c">They\'re in.</span>', 17.05, 0.09);
   const { ph, app } = bigPhone(s);
   pop(ph, 17.0, { duration: 0.5, ease: 'back.out(1.5)' }, { y: 400, scale: 0.9 });
@@ -422,7 +464,7 @@ function bigPhone(parent: HTMLElement, top = 420) {
     ['amaka', 'Amaka joined the party 🎉'],
   ];
   toasts.forEach(([id, txt], i) => {
-    const tst = el(`<div class="toast-v abs" style="left:260px;top:${560 + i * 120}px"><img src="${portrait(id, 160)}">${txt}</div>`, s);
+    const tst = el(`<div class="toast-v abs" style="left:${L(260, 230)}px;top:${L(560, 560) + i * 120}px"><img src="${portrait(id, 160)}">${txt}</div>`, s);
     pop(tst, 18.35 + i * 0.32, { duration: 0.45, ease: 'back.out(1.8)' }, { x: 300, scale: 0.9 });
     sfx(18.35 + i * 0.32, 'chime', 0.7);
   });
@@ -432,7 +474,7 @@ function bigPhone(parent: HTMLElement, top = 420) {
 
 {
   const s = scene(20.0, 26.0, '', 7);
-  const head = el('<div class="abs center-x" style="top:150px"><span class="pill-cap" style="font-size:58px">Hang out like you\'re <span style="color:#FFD23F">&nbsp;actually there</span></span></div>', s);
+  const head = el(`<div class="abs center-x" style="top:${L(150, 50)}px"><span class="pill-cap" style="font-size:58px">Hang out like you\'re <span style="color:#FFD23F">&nbsp;actually there</span></span></div>`, s);
   pop(head, 20.05, {}, { scale: 0.6, y: -40 });
   const shots: { t: number; x: number; y: number; z0: number; z1: number; cap: string }[] = [
     { t: 20.0, x: 22.4, y: 10.6, z0: 3.9, z1: 4.3, cap: '💬 Chat' },
@@ -444,7 +486,7 @@ function bigPhone(parent: HTMLElement, top = 420) {
     tl.set(cam, { x: sh.x, y: sh.y, zoom: sh.z0 }, sh.t);
     tl.to(cam, { zoom: sh.z1, y: sh.y + 0.1, duration: 1.5, ease: 'none' }, sh.t);
     cut(sh.t, worldLayer);
-    const cap = el(`<div class="abs center-x" style="top:1500px"><span class="pill-cap">${sh.cap}</span></div>`, s);
+    const cap = el(`<div class="abs center-x" style="top:${L(1500, 890)}px"><span class="pill-cap">${sh.cap}</span></div>`, s);
     pop(cap, sh.t + 0.05, { duration: 0.4 }, { scale: 0.4, y: 60 });
     out(cap, sh.t + 1.38, { duration: 0.12 });
     if (i === 0) sfx(sh.t, 'impact', 0.6);
@@ -467,22 +509,22 @@ function bigPhone(parent: HTMLElement, top = 420) {
   const s = scene(26.0, 27.0, 'bg-party', 8);
   cut(26.0, s);
   sfx(26.0, 'impact', 1.2);
-  const burst = el('<div class="abs" style="left:-460px;top:-0px;width:2000px;height:2000px;background:repeating-conic-gradient(rgba(255,210,63,0.16) 0 10deg, transparent 10deg 20deg);border-radius:50%"></div>', s);
+  const burst = el(`<div class="abs" style="left:${L(-460, -40)}px;top:${L(0, -460)}px;width:2000px;height:2000px;background:repeating-conic-gradient(rgba(255,210,63,0.16) 0 10deg, transparent 10deg 20deg);border-radius:50%"></div>`, s);
   tl.fromTo(burst, { rotation: 0 }, { rotation: 40, duration: 1, ease: 'none', immediateRender: false }, 26.0);
-  const t1 = el('<div class="abs center-x mega" style="top:640px;font-size:190px">GAME<br><span class="pink">NIGHT</span></div>', s);
+  const t1 = el(`<div class="abs center-x mega" style="top:${L(640, 150)}px;font-size:190px">GAME<br><span class="pink">NIGHT</span></div>`, s);
   pop(t1, 26.02, { duration: 0.5, ease: 'back.out(2)' }, { scale: 3, rotation: 10 });
-  const dice = el('<div class="abs center-x" style="top:1130px;font-size:180px">🎲</div>', s);
+  const dice = el(`<div class="abs center-x" style="top:${L(1130, 560)}px;font-size:${L(180, 150)}px">🎲</div>`, s);
   pop(dice, 26.2, { rotation: 360, duration: 0.6 }, { scale: 0, rotation: -180 });
-  const sub = el('<div class="abs center-x sub" style="top:1380px">4 party games, built right in</div>', s);
+  const sub = el(`<div class="abs center-x sub" style="top:${L(1380, 800)}px">4 party games, built right in</div>`, s);
   pop(sub, 26.4, {}, { scale: 0.7, y: 30 });
 }
 
 function gameScene(start: number, title: string, emoji: string, color: string, players: string) {
   const s = scene(start, start + 2.0, 'bg-party', 9);
   cut(start, s);
-  const lab = el(`<div class="abs center-x" style="top:150px"><span class="game-label" style="background:${color}">${emoji} ${title}</span></div>`, s);
+  const lab = el(`<div class="abs center-x" style="${L('', COL)}top:${L(150, 400)}px"><span class="game-label" style="background:${color}">${emoji} ${title}</span></div>`, s);
   pop(lab, start + 0.02, { duration: 0.45 }, { scale: 0.3, rotation: -6 });
-  const pl = el(`<div class="abs center-x sub" style="top:310px;font-size:36px;opacity:.9">${players}</div>`, s);
+  const pl = el(`<div class="abs center-x sub" style="${L('', COL)}top:${L(310, 560)}px;font-size:${L(36, 44)}px;opacity:.9">${players}</div>`, s);
   pop(pl, start + 0.15, {}, { scale: 0.8 });
   const { ph, app } = bigPhone(s, 400);
   pop(ph, start, { duration: 0.45, ease: 'power3.out' }, { y: 260, scale: 0.95 });
@@ -538,7 +580,7 @@ function confettiBurst(parent: HTMLElement, t: number, cx: number, cy: number) {
   const word = body.querySelector('.word-display') as HTMLElement;
   tl.set(word, { innerHTML: 'pizza', className: 'word-display secret' }, T0 + 1.3);
   tl.fromTo(word, { scale: 1.6 }, { scale: 1, duration: 0.35, ease: 'back.out(3)', immediateRender: false }, T0 + 1.3);
-  confettiBurst(s, T0 + 1.3, 540, 900);
+  confettiBurst(s, T0 + 1.3, L(540, 1430), L(900, 360));
   sfx(T0 + 1.3, 'correct', 1);
   const cvs = body.querySelector('canvas') as HTMLCanvasElement;
   const c = cvs.getContext('2d')!;
@@ -670,7 +712,7 @@ function circlePts(cx: number, cy: number, r: number, n: number): [number, numbe
   pop(votes, T0 + 1.05, { duration: 0.3 }, { scale: 0 });
   tl.set(kenjiRow!, { className: 'clue-row turn' }, T0 + 1.05);
   sfx(T0 + 1.05, 'click', 0.9);
-  const stamp = el('<div class="stamp" style="left:230px;top:1180px">CAUGHT! 😈</div>', s);
+  const stamp = el(`<div class="stamp" style="left:${L(230, 1080)}px;top:${L(1180, 640)}px">CAUGHT! 😈</div>`, s);
   pop(stamp, T0 + 1.35, { rotation: -12, duration: 0.35, ease: 'back.out(3)' }, { scale: 3, rotation: -30 });
   sfx(T0 + 1.35, 'impact', 0.9);
 }
@@ -682,20 +724,20 @@ function circlePts(cx: number, cy: number, r: number, n: number): [number, numbe
   cut(35.0, s);
   const cols = ['#FF4D8D', '#FFD23F', '#2EC4F1', '#3DDC97', '#9B5DE5', '#FF8A3D'];
   const conf = Array.from({ length: 34 }, (_, i) => {
-    const p = el(`<div class="confetti-v" style="left:${(i * 97) % 1060}px;top:-40px;background:${cols[i % 6]}"></div>`, s);
+    const p = el(`<div class="confetti-v" style="left:${(i * L(97, 173)) % (SW - 20)}px;top:-40px;background:${cols[i % 6]}"></div>`, s);
     return { p, speed: 260 + ((i * 53) % 220), off: (i * 137) % 1900, spin: 200 + (i % 7) * 60 };
   });
   updaters.push((t) => {
     if (t < 35) return;
     const e = t - 35;
-    for (const c of conf) gsap.set(c.p, { y: (c.off + e * c.speed) % 2000, rotation: e * c.spin });
+    for (const c of conf) gsap.set(c.p, { y: (c.off + e * c.speed) % (SH + 80), rotation: e * c.spin });
   });
-  const logo = el('<div class="abs center-x mega" style="top:200px;font-size:170px">HOUSE<br><span class="pink">PARTY</span></div>', s);
+  const logo = el(`<div class="abs center-x mega" style="${L('', COL)}top:${L(200, 90)}px;font-size:${L(170, 150)}px">HOUSE<br><span class="pink">PARTY</span></div>`, s);
   pop(logo, 35.05, { rotation: -3, duration: 0.6, ease: 'back.out(1.8)' }, { scale: 2.6, rotation: 8 });
   sfx(35.0, 'impact', 1);
-  const head = el('<div class="abs center-x head" style="top:570px;font-size:76px"></div>', s);
+  const head = el(`<div class="abs center-x head" style="${L('', COL)}top:${L(570, 440)}px;font-size:${L(76, 58)}px"></div>`, s);
   words(head, 'Throw your first party <span class="y">tonight</span> 🎉', 35.6, 0.08);
-  const cv = el<HTMLCanvasElement>('<canvas width="1080" height="560" style="position:absolute;left:0;top:830px;width:1080px;height:560px"></canvas>', s);
+  const cv = el<HTMLCanvasElement>(`<canvas width="1080" height="560" style="position:absolute;left:${L(0, 880)}px;top:${L(830, 300)}px;width:1080px;height:560px"></canvas>`, s);
   const c = cv.getContext('2d')!;
   const crew = ['zara', 'leo', 'umar', 'amaka', 'kenji'];
   updaters.push((t) => {
@@ -704,18 +746,18 @@ function circlePts(cx: number, cy: number, r: number, n: number): [number, numbe
     crew.forEach((id, i) => {
       const k = Math.min(1, Math.max(0, (t - 35.2 - i * 0.08) / 0.4));
       const ease = 1 - Math.pow(1 - k, 3);
-      const x = 120 + i * 210;
+      const x = L(120, 170) + i * L(210, 195);
       const y = 530 + (1 - ease) * 300 - (i % 2 ? 0 : 18);
       drawAvatar(c, CAST[id], x, y, i === 2 ? 6.8 : 6.0, { dir: 'down', anim: 'dance', t: t + i * 0.3, danceMove: [1, 3, 0, 5, 2][i], seed: i });
     });
   });
-  const btn = el('<div class="abs center-x" style="top:1380px"><span class="cta-btn">Play free 🎉</span></div>', s);
+  const btn = el(`<div class="abs center-x" style="${L('', COL)}top:${L(1380, 650)}px"><span class="cta-btn">Play free 🎉</span></div>`, s);
   pop(btn, 36.3, { duration: 0.5 }, { scale: 0.3, y: 80 });
   sfx(36.3, 'pop', 1);
   tl.to(btn, { scale: 1.06, duration: 0.25, yoyo: true, repeat: 7, ease: 'sine.inOut' }, 37.0);
-  const sub = el('<div class="abs center-x sub" style="top:1560px;font-size:42px">no download · works on any phone</div>', s);
+  const sub = el(`<div class="abs center-x sub" style="${L('', COL)}top:${L(1560, 820)}px;font-size:42px">no download · works on any phone</div>`, s);
   pop(sub, 36.7, {}, { scale: 0.8, y: 30 });
-  const link = el('<div class="abs center-x" style="top:1650px"><span class="pill-cap" style="font-size:52px">🔗 link in bio</span></div>', s);
+  const link = el(`<div class="abs center-x" style="${L('', COL)}top:${L(1650, 905)}px"><span class="pill-cap" style="font-size:52px">${L('🔗 link in bio', '👇 link below')}</span></div>`, s);
   pop(link, 37.0, {}, { scale: 0.5, y: 40 });
   sfx(37.0, 'sparkle', 0.8);
 }

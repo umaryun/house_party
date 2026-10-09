@@ -1,5 +1,5 @@
 // Renders the launch video: captures every frame from the composition page and encodes MP4.
-// Usage: node video/render.mjs [--fps 30] [--from 0] [--to 40] [--stills 1,5.5,12] [--out video/out/house-party-launch.mp4]
+// Usage: node video/render.mjs [--format landscape] [--fps 30] [--from 0] [--to 40] [--stills 1,5.5,12] [--out video/out/house-party-launch.mp4]
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -7,13 +7,15 @@ import fs from 'node:fs';
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, a, i, arr) => (a.startsWith('--') ? [...acc, [a.slice(2), arr[i + 1]]] : acc), []),
 );
-const BASE = args.base || 'http://localhost:5173/video/index.html';
+const LAND = args.format === 'landscape';
+const BASE = (args.base || 'http://localhost:5173/video/index.html') + (LAND ? '?format=landscape' : '');
+const [VW, VH] = LAND ? [1920, 1080] : [1080, 1920];
 const FPS = +(args.fps || 30);
-const OUT = args.out || 'video/out/house-party-launch.mp4';
+const OUT = args.out || (LAND ? 'video/out/house-party-launch-16x9.mp4' : 'video/out/house-party-launch.mp4');
 fs.mkdirSync('video/out', { recursive: true });
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
-const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.error('pageerror', e.message));
 page.on('console', (m) => m.type() === 'error' && console.error('console', m.text()));
 await page.goto(BASE);
@@ -32,7 +34,7 @@ if (args.stills) {
       t += 1 / FPS;
     }
     await page.evaluate((x) => window.__renderFrame(x), target);
-    await page.screenshot({ path: `video/out/still-${target.toFixed(2)}.jpg`, type: 'jpeg', quality: 88 });
+    await page.screenshot({ path: `video/out/still-${LAND ? 'l' : 'v'}-${target.toFixed(2)}.jpg`, type: 'jpeg', quality: 88 });
     console.log('still', target);
   }
   await browser.close();
