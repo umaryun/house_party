@@ -54,6 +54,17 @@ Or use Docker: `docker build -t house-party . && docker run -p 3001:3001 -v hp-d
 
 Environment variables: `PORT`, `DATA_DIR` (where users are stored, default `./data`), `AUTH_SECRET` (set this in production), `CORS_ORIGIN`.
 
+### Deploy on Railway
+
+The repo is ready for Railway: `railway.json` builds from the `Dockerfile` and health-checks `/api/health`.
+
+1. In Railway, create a project and pick **Deploy from GitHub repo**, then choose this repo.
+2. On the service, add a **Volume** mounted at `/data`. This is where accounts are stored. Without it, everyone's account is wiped on every deploy.
+3. Under **Variables**, add `AUTH_SECRET` with a long random value (for example the output of `openssl rand -hex 32`). Railway sets `PORT` for you.
+4. Under **Settings → Networking**, click **Generate Domain** to get a public URL.
+
+Keep the service at **1 replica**. Parties live in the server's memory, so friends on different replicas wouldn't see each other.
+
 ## Tests
 
 ```bash
