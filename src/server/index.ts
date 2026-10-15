@@ -111,3 +111,11 @@ if (fs.existsSync(dist)) {
 }
 
 server.listen(PORT, () => console.log(`🎉 House Party server on http://localhost:${PORT}`));
+
+// Hosts like Railway send SIGTERM on redeploy: save accounts before exiting.
+for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(sig, () => {
+    users.flush();
+    process.exit(0);
+  });
+}

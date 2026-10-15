@@ -44,12 +44,17 @@ class UserStore {
 
   private scheduleSave() {
     if (this.saveTimer) return;
-    this.saveTimer = setTimeout(() => {
-      this.saveTimer = null;
-      const tmp = FILE + '.tmp';
-      fs.writeFileSync(tmp, JSON.stringify([...this.users.values()]));
-      fs.renameSync(tmp, FILE);
-    }, 500);
+    this.saveTimer = setTimeout(() => this.flush(), 500);
+  }
+
+  /** Write pending changes now (also called on shutdown so a redeploy doesn't lose them). */
+  flush() {
+    if (!this.saveTimer) return;
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    const tmp = FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify([...this.users.values()]));
+    fs.renameSync(tmp, FILE);
   }
 
   get(id: string) {
