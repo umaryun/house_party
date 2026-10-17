@@ -11,7 +11,7 @@ import { randomAvatar, type Avatar } from '../src/shared/avatar';
 import type { PlayerState } from '../src/shared/types';
 import { renderSoundtrack, type Arrangement } from './audio';
 
-const DURATION = 28;
+const DURATION = 31;
 const SW = 1080;
 const SH = 1920;
 /** The app is laid out at phone width and scaled up to fill the frame, like a screen recording. */
@@ -25,9 +25,9 @@ const ARRANGEMENT: Arrangement = {
     [3.95, 4.45], // record scratch → "LEO??"
     [7.15, 7.7], // → "TOLD YOU"
   ],
-  brightAfter: 17.0,
-  fills: [9.0, 16.5, 22.5],
-  endHit: 27.0,
+  brightAfter: 22.2,
+  fills: [9.0, 16.5, 19.1, 21.7, 25.7],
+  endHit: 30.0,
 };
 
 const stage = document.getElementById('stage')!;
@@ -363,11 +363,97 @@ function hud(app: HTMLElement) {
   burst(14.8, '🎉', 480, 1350, 6);
 }
 
-// ───────────────────────── S5 · Hanging out (17.0–23.0s) ─────────────────────────
+// ───────────────────────── S4b · Emoji Charades (17.0–19.6s) ─────────────────────────
 
 {
   const T = 17.0;
-  const s = scene(T, 23.0, '', 6);
+  const s = scene(T, 19.6, '', 6);
+  cut(T, s);
+  const app = appScreen(s);
+  const body = el(
+    `<div class="game-overlay" style="position:absolute;animation:none"><div class="game-head" style="border-bottom:3px solid #9B5DE5"><span style="font-size:30px">🎭</span><div class="gt"></div><span class="close-x" style="display:grid;place-items:center">🏠</span></div><div class="game-body"></div></div>`,
+    app,
+  ).querySelector('.game-body') as HTMLElement;
+  body.innerHTML = `<div style="flex:1;display:flex;flex-direction:column"><div class="row" style="padding:8px 12px 0;justify-content:space-between"><span class="pill">🎭 Leo is acting</span><span class="pill" style="font-size:15px">🎬 Movie</span><span class="pill">⏱ 52</span></div><div class="word-display wd">_ _ _   _ _ _ _   _ _ _ _</div><div class="stage-box" style="height:280px"><canvas width="560" height="300"></canvas><div class="clue-strip"></div></div><div class="feed fd" style="font-size:18px;gap:7px"></div></div>`;
+  const strip = body.querySelector('.clue-strip') as HTMLElement;
+  ['🦁', '👑', '🌅'].forEach((e, i) => {
+    const sp = el(`<span>${e}</span>`, strip);
+    pop(sp, T + 0.25 + i * 0.25, { duration: 0.25 }, { scale: 0, y: 30 });
+    sfx(T + 0.25 + i * 0.25, 'pop', 0.6);
+  });
+  const cv = body.querySelector('canvas') as HTMLCanvasElement;
+  const c = cv.getContext('2d')!;
+  updaters.push((t) => {
+    if (t < T - 0.1 || t > 19.7) return;
+    c.clearRect(0, 0, 560, 300);
+    const pose = t < T + 0.9 ? 'angry' : t < T + 1.6 ? 'jump' : 'love';
+    drawAvatar(c, CAST.leo, 280, 285, 3.6, { dir: 'down', anim: 'idle', t, pose });
+  });
+  caption(T + 0.05, 18.55, 'round 3: emoji charades 🎭', 90, 72);
+  const feed = body.querySelector('.fd') as HTMLElement;
+  const lines: [number, string, string][] = [
+    [17.9, 'amaka', 'lion?'],
+    [18.25, 'kenji', 'shrek?? 💀'],
+  ];
+  for (const [t, id, text] of lines) {
+    const f = el(`<div class="feed-item guess"><b>${NAMES[id]}: </b>${text}</div>`, feed);
+    pop(f, t, { duration: 0.25 }, { scale: 0.8, x: -20 });
+    sfx(t, 'pop', 0.55);
+  }
+  const C = 18.6;
+  const ok = el(`<div class="feed-item correct">Zara got it! +390 🎉</div>`, feed);
+  pop(ok, C, { duration: 0.3 }, { scale: 0.7 });
+  const wd = body.querySelector('.wd')!;
+  tl.set(wd, { innerHTML: 'The Lion King', className: 'word-display secret wd' }, C);
+  tl.fromTo(wd, { scale: 1.6 }, { scale: 1, duration: 0.35, ease: 'back.out(3)', immediateRender: false }, C);
+  sfx(C, 'correct', 1);
+  caption(C + 0.05, 19.6, 'zara redeeming herself 😭', 90, 76);
+}
+
+// ───────────────────────── S4c · Who's the Imposter (19.6–22.2s) ─────────────────────────
+
+{
+  const T = 19.6;
+  const s = scene(T, 22.2, '', 7);
+  cut(T, s);
+  const app = appScreen(s);
+  const body = el(
+    `<div class="game-overlay" style="position:absolute;animation:none"><div class="game-head" style="border-bottom:3px solid #2EC4F1"><span style="font-size:30px">👀</span><div class="gt"></div><span class="close-x" style="display:grid;place-items:center">🏠</span></div><div class="game-body"></div></div>`,
+    app,
+  ).querySelector('.game-body') as HTMLElement;
+  body.innerHTML = `<div style="flex:1"><div class="row" style="padding:10px 12px 0;justify-content:space-between"><span class="pill">🗳️ Vote</span><span class="pill">⏱ 33</span></div><div class="secret-card" style="background:linear-gradient(135deg,#2EC4F1,#3a2a9c)"><div style="font-weight:700">🍔 Food · The secret word is</div><div class="big">pizza</div></div><div class="clue-board"></div></div>`;
+  const board = body.querySelector('.clue-board') as HTMLElement;
+  const rows: [string, string][] = [
+    ['umar', 'cheesy'],
+    ['zara', 'italian'],
+    ['leo', 'slice'],
+    ['kenji', 'uh… round?'],
+  ];
+  let kenjiRow: HTMLElement | null = null;
+  rows.forEach(([id, clue], i) => {
+    const r = el(`<div class="clue-row"><img src="${portrait(id, 110)}"><span class="cn">${id === 'umar' ? 'You' : NAMES[id]}</span><div class="row wrap grow"><span class="clue-word">${clue}</span></div></div>`, board);
+    pop(r.querySelector('.clue-word')!, T + 0.2 + i * 0.22, { duration: 0.25 }, { scale: 0 });
+    sfx(T + 0.2 + i * 0.22, 'pop', 0.6);
+    if (id === 'kenji') kenjiRow = r;
+  });
+  caption(T + 0.05, 20.8, 'round 4: who’s the imposter 👀', 90, 70);
+  const votes = el('<span class="pill" style="background:var(--red)">🗳️ 4</span>', kenjiRow!);
+  pop(votes, 20.85, { duration: 0.25 }, { scale: 0 });
+  tl.set(kenjiRow!, { className: 'clue-row turn' }, 20.85);
+  sfx(20.85, 'click', 0.9);
+  const stamp = el('<div class="stamp" style="left:250px;top:1340px;font-size:120px">CAUGHT 😈</div>', s);
+  pop(stamp, 21.1, { rotation: -10, duration: 0.3, ease: 'back.out(3)' }, { scale: 3, rotation: -30 });
+  sfx(21.1, 'boom', 0.9);
+  shake(s, 21.1, 16);
+  caption(21.2, 22.2, 'kenji cannot lie to save his life 💀', 90, 66);
+}
+
+// ───────────────────────── S5 · Hanging out (22.2–26.2s) ─────────────────────────
+
+{
+  const T = 22.2;
+  const B = T + 2.0; // cut to the bonfire
+  const s = scene(T, 26.2, '', 8);
   cut(T, s);
   const app = appScreen(s);
   const w = makeWorld(app, 'umar', [
@@ -384,60 +470,65 @@ function hud(app: HTMLElement) {
   ]);
   hud(app);
   const cam = { x: 7.8, y: 15.0, zoom: 1.75 };
-  tl.to(cam, { zoom: 1.95, duration: 3.2, ease: 'none' }, T);
-  tl.set(cam, { x: 7.6, y: 24.6, zoom: 1.9 }, 20.2);
-  tl.to(cam, { zoom: 2.15, duration: 2.8, ease: 'none' }, 20.2);
+  tl.to(cam, { zoom: 1.95, duration: 2.0, ease: 'none' }, T);
+  tl.set(cam, { x: 7.6, y: 24.6, zoom: 1.9 }, B);
+  tl.to(cam, { zoom: 2.15, duration: 2.0, ease: 'none' }, B);
   updaters.push(() => (w.cinematic = { ...cam }));
-  cut(20.2, s);
-  caption(T + 0.1, 20.1, 'anyway we’re still friends 🕺', 300, 74);
+  cut(B, s);
+  caption(T + 0.1, B - 0.05, 'anyway we’re still friends 🕺', 300, 74);
 
   // the party chat, open over the dance floor
   const drawer = el(
     `<div class="chat-drawer" style="left:10px;width:370px;bottom:78px;height:300px;animation:none"><header><span>💬 Party chat</span></header><div class="chat-list cl" style="justify-content:flex-end"></div></div>`,
     app,
   );
-  pop(drawer, T + 0.35, { duration: 0.3, ease: 'power3.out' }, { y: 60, scale: 1 });
+  pop(drawer, T + 0.2, { duration: 0.3, ease: 'power3.out' }, { y: 60, scale: 1 });
   const list = drawer.querySelector('.cl') as HTMLElement;
   const msgs: [number, string, string][] = [
-    [17.6, 'zara', 'rematch. right now.'],
-    [18.15, 'leo', 'im not drinking the punch this time'],
-    [18.7, 'kenji', 'same time tmr?'],
-    [19.25, 'amaka', 'obviously 😭'],
+    [T + 0.35, 'zara', 'rematch. right now.'],
+    [T + 0.75, 'leo', 'im not drinking the punch this time'],
+    [T + 1.15, 'kenji', 'same time tmr?'],
+    [T + 1.55, 'amaka', 'obviously 😭'],
   ];
   for (const [t, id, text] of msgs) {
     const m = el(`<div class="msg"><img src="${portrait(id, 96)}"><div style="min-width:0"><div class="who">${NAMES[id]}</div><div class="bubble">${text}</div></div></div>`, list);
     gsap.set(m, { display: 'none' });
     tl.set(m, { display: 'flex' }, t);
-    pop(m, t, { duration: 0.25 }, { scale: 0.85, y: 20 });
+    pop(m, t, { duration: 0.22 }, { scale: 0.85, y: 20 });
     sfx(t, 'pop', 0.6);
   }
-  hide(drawer, 20.1);
-  at(17.9, () => w.showEmote('zara', 'fire'));
-  at(18.5, () => w.showEmote('leo', 'laugh'));
-  at(19.0, () => w.showEmote('mia', 'heart'));
+  hide(drawer, B - 0.05);
+  at(T + 0.5, () => w.showEmote('zara', 'fire'));
+  at(T + 1.0, () => w.showEmote('leo', 'laugh'));
+  at(T + 1.4, () => w.showEmote('mia', 'heart'));
 
   // bonfire
-  at(20.4, () => w.showBubble('tobi', 'this is our house now'));
-  at(20.9, () => w.showEmote('sam', 'heart'));
-  at(21.3, () => w.showBubble('nia', 'every friday?? 🥺'));
-  at(21.9, () => w.showEmote('tobi', 'party'));
-  sfx(20.4, 'pop', 0.6);
-  sfx(21.3, 'pop', 0.6);
-  caption(20.3, 23.0, 'every friday now fr 🔥', 300, 74);
+  at(B + 0.15, () => w.showBubble('tobi', 'this is our house now'));
+  at(B + 0.6, () => w.showEmote('sam', 'heart'));
+  at(B + 0.9, () => w.showBubble('nia', 'every friday?? 🥺'));
+  at(B + 1.4, () => w.showEmote('tobi', 'party'));
+  sfx(B + 0.15, 'pop', 0.6);
+  sfx(B + 0.9, 'pop', 0.6);
+  caption(B + 0.1, 26.2, 'every friday now fr 🔥', 300, 74);
 }
 
-// ───────────────────────── S6 · CTA (23.0–28.0s) ─────────────────────────
+// ───────────────────────── S6 · CTA (26.2–31.0s) ─────────────────────────
 
 {
-  const T = 23.0;
-  const s = scene(T, DURATION + 0.01, 'bg-party', 7);
+  const T = 26.2;
+  const s = scene(T, DURATION + 0.01, 'bg-party', 9);
   cut(T, s);
   const logo = el('<div class="abs center-x mega" style="top:150px;font-size:120px">HOUSE<br><span class="pink">PARTY</span></div>', s);
   pop(logo, T + 0.05, { rotation: -3, duration: 0.45 }, { scale: 2.2, rotation: 8 });
-  const head = el('<div class="tk" style="top:520px;font-size:84px">your group chat <span class="y">needs</span> this 🫵</div>', s);
+  const head = el('<div class="tk" style="top:450px;font-size:80px">your group chat <span class="y">needs</span> this 🫵</div>', s);
   pop(head, T + 0.45, { duration: 0.3 }, { scale: 0.6 });
+  const games = el('<div class="abs" style="left:60px;right:150px;top:650px;text-align:center"></div>', s);
+  ['🕵️ Mafia', '🎨 Sketch & Guess', '🎭 Emoji Charades', '👀 Imposter'].forEach((g, i) => {
+    const ch = el(`<span class="feature-chip" style="font-size:38px;margin:6px">${g}</span>`, games);
+    pop(ch, T + 0.75 + i * 0.1, { duration: 0.3 }, { scale: 0.4, y: 30 });
+  });
   sfx(T + 0.45, 'boom', 0.7);
-  const cv = el<HTMLCanvasElement>('<canvas width="1080" height="560" style="position:absolute;left:0;top:760px;width:1080px;height:560px"></canvas>', s);
+  const cv = el<HTMLCanvasElement>('<canvas width="1080" height="560" style="position:absolute;left:0;top:800px;width:1080px;height:560px"></canvas>', s);
   const c = cv.getContext('2d')!;
   const crew = ['zara', 'leo', 'umar', 'amaka', 'kenji'];
   updaters.push((t) => {
@@ -455,12 +546,12 @@ function hud(app: HTMLElement) {
       });
     });
   });
-  const btn = el('<div class="abs center-x" style="top:1340px"><span class="cta-btn" style="font-size:60px">play free 👉 houseparty.pro</span></div>', s);
-  pop(btn, T + 1.1, { duration: 0.4 }, { scale: 0.3, y: 80 });
-  sfx(T + 1.1, 'sparkle', 0.9);
+  const btn = el('<div class="abs center-x" style="top:1370px"><span class="cta-btn" style="font-size:60px">play free 👉 houseparty.pro</span></div>', s);
+  pop(btn, T + 1.3, { duration: 0.4 }, { scale: 0.3, y: 80 });
+  sfx(T + 1.3, 'sparkle', 0.9);
   tl.to(btn, { scale: 1.05, duration: 0.25, yoyo: true, repeat: 7, ease: 'sine.inOut' }, T + 1.8);
-  const sub = el('<div class="abs center-x sub" style="top:1530px;font-size:42px">no download · send your friends a code</div>', s);
-  pop(sub, T + 1.4, {}, { scale: 0.8, y: 30 });
+  const sub = el('<div class="abs center-x sub" style="top:1555px;font-size:40px">no download · send your friends a code</div>', s);
+  pop(sub, T + 1.6, {}, { scale: 0.8, y: 30 });
 }
 
 // ───────────────────────── frame driver ─────────────────────────
