@@ -383,3 +383,32 @@ body {
 .app-frame {
   --safe-t: 24px;
 }
+
+/* ───── gameplay clip: feed-native captions ───── */
+
+.tk {
+  position: absolute;
+  left: 60px;
+  right: 150px;
+  z-index: 60;
+  text-align: center;
+  font-family: var(--font);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.5px;
+  color: #fff;
+  text-shadow:
+    -4px -4px 0 #000, 4px -4px 0 #000, -4px 4px 0 #000, 4px 4px 0 #000,
+    0 -5px 0 #000, 0 5px 0 #000, -5px 0 0 #000, 5px 0 0 #000,
+    0 10px 24px rgba(0, 0, 0, 0.55);
+}
+
+.tk .y {
+  color: #ffd23f;
+}
+
+.burst {
+  position: absolute;
+  z-index: 61;
+  font-size: 84px;
+}

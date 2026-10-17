@@ -1,11 +1,25 @@
-// Offline-rendered soundtrack for the launch video: a 120bpm house groove built with the same
-// synth voices as the in-app music, arranged around the video's cuts, plus sound effects.
+// Offline-rendered soundtracks for the videos: a 120bpm house groove built with the same
+// synth voices as the in-app music, arranged around each video's cuts, plus sound effects.
 const SR = 44100;
 const BPM = 120;
 const BEAT = 60 / BPM;
-const DROP = 3.0; // groove starts on the reveal
-const BREAK = [25.5, 26.0]; // silence before "GAME NIGHT"
-const END_HIT = 38.0;
+
+export interface Arrangement {
+  drop: number; // groove starts here; a filtered build-up plays before it when > 0
+  breaks: [number, number][]; // silent gaps (for punchlines)
+  brightAfter: number; // add the sparkly arp from here on
+  fills: number[]; // snare fills into new sections
+  endHit: number; // final chord
+}
+
+/** The launch video's arrangement. */
+export const LAUNCH_ARRANGEMENT: Arrangement = {
+  drop: 3.0, // groove starts on the reveal
+  breaks: [[25.5, 26.0]], // silence before "GAME NIGHT"
+  brightAfter: 26.0,
+  fills: [7.5, 11.5, 16.5, 19.5],
+  endHit: 38.0,
+};
 
 const mtof = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 const CHORDS = [
@@ -15,7 +29,12 @@ const CHORDS = [
   [55, 59, 62, 65], // G7
 ];
 
-export async function renderSoundtrack(duration: number, cues: { t: number; name: string; gain?: number }[]): Promise<string> {
+export async function renderSoundtrack(
+  duration: number,
+  cues: { t: number; name: string; gain?: number }[],
+  arr: Arrangement = LAUNCH_ARRANGEMENT,
+): Promise<string> {
+  const { drop: DROP, endHit: END_HIT } = arr;
   const ctx = new OfflineAudioContext(2, Math.ceil(SR * duration), SR);
   const master = ctx.createGain();
   master.gain.value = 0.85;
@@ -40,7 +59,7 @@ export async function renderSoundtrack(duration: number, cues: { t: number; name
   const nd = noise.getChannelData(0);
   for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
 
-  const inBreak = (t: number) => t >= BREAK[0] && t < BREAK[1];
+  const inBreak = (t: number) => arr.breaks.some(([a, b]) => t >= a && t < b);
 
   // ── voices ──
   const kick = (t: number, v = 1) => {
@@ -93,27 +112,27 @@ export async function renderSoundtrack(duration: number, cues: { t: number; name
     }
   };
 
-  // ── intro (0–3s): filtered pads, building hats, snare roll ──
-  for (let i = 0; i < 6; i++) {
+  // ── intro (0 → drop): filtered pads, building hats, snare roll ──
+  for (let i = 0; i < Math.round(DROP / BEAT); i++) {
     const t = i * BEAT;
     const cut = 500 + i * 450;
     chord(t, CHORDS[Math.floor(i / 4) % 4], BEAT * 1.6, 0.06, cut, 'sawtooth');
     tone(t, mtof(CHORDS[Math.floor(i / 4) % 4][0] - 24), BEAT * 0.9, 'triangle', 0.18, 400);
   }
   for (let t = 1.0; t < DROP; t += BEAT / 2) noiseHit(t, 0.04, 0.05 + (t / DROP) * 0.07, 'highpass', 7000);
-  for (let t = 2.0, step = BEAT / 4; t < DROP - 0.01; t += step) {
-    noiseHit(t, 0.08, 0.06 + ((t - 2) / 1) * 0.22, 'bandpass', 2000, pump, 0.6);
-    if (t > 2.5) step = BEAT / 8;
+  for (let t = DROP - 1, step = BEAT / 4; t >= 0 && t < DROP - 0.01; t += step) {
+    noiseHit(t, 0.08, 0.06 + (t - (DROP - 1)) * 0.22, 'bandpass', 2000, pump, 0.6);
+    if (t > DROP - 0.5) step = BEAT / 8;
   }
 
-  // ── groove (3s → end) ──
+  // ── groove (drop → end) ──
   let step = 0;
   for (let t = DROP; t < END_HIT - 0.001; t += BEAT / 4, step++) {
     if (inBreak(t)) continue;
     const s = step % 16;
     const bar = Math.floor(step / 16);
     const notes = CHORDS[bar % 4];
-    const afterGames = t >= BREAK[1];
+    const afterGames = t >= arr.brightAfter;
     if (s % 4 === 0) kick(t);
     if (s === 4 || s === 12) {
       noiseHit(t, 0.16, 0.32, 'bandpass', 1800, pump, 0.9); // clap
@@ -132,7 +151,7 @@ export async function renderSoundtrack(duration: number, cues: { t: number; name
       tone(t, mtof(n), BEAT * 0.4, 'square', 0.022, 4200);
     }
     // little fill into each new section
-    if ([7.5, 11.5, 16.5, 19.5].some((x) => Math.abs(t - x) < 0.01)) {
+    if (arr.fills.some((x) => Math.abs(t - x) < 0.01)) {
       for (let k = 0; k < 4; k++) noiseHit(t + k * (BEAT / 4), 0.07, 0.14 + k * 0.04, 'bandpass', 2200, pump, 0.6);
     }
   }
@@ -201,6 +220,46 @@ export async function renderSoundtrack(duration: number, cues: { t: number; name
         o.start(t);
         o.stop(t + 0.85);
         noiseHit(t, 0.9, 0.22 * v, 'highpass', 4000, fxBus);
+        break;
+      }
+      case 'boom': {
+        // deep meme-style "boom" for punchlines
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        const sh = ctx.createWaveShaper();
+        const curve = new Float32Array(256);
+        for (let i = 0; i < 256; i++) curve[i] = Math.tanh(((i / 128) - 1) * 3);
+        sh.curve = curve;
+        o.frequency.setValueAtTime(95, t);
+        o.frequency.exponentialRampToValueAtTime(38, t + 0.9);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.9 * v, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+        o.connect(sh).connect(g).connect(fxBus);
+        o.start(t);
+        o.stop(t + 1.25);
+        noiseHit(t, 0.15, 0.25 * v, 'lowpass', 900, fxBus);
+        break;
+      }
+      case 'scratch': {
+        // record scratch: a quick back-and-forth filtered noise sweep
+        for (let k = 0; k < 2; k++) {
+          const n = ctx.createBufferSource();
+          n.buffer = noise;
+          const f = ctx.createBiquadFilter();
+          f.type = 'bandpass';
+          f.Q.value = 4;
+          const t0 = t + k * 0.12;
+          f.frequency.setValueAtTime(k ? 600 : 2400, t0);
+          f.frequency.exponentialRampToValueAtTime(k ? 2600 : 500, t0 + 0.11);
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(0.7 * v, t0 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+          n.connect(f).connect(g).connect(fxBus);
+          n.start(t0, Math.random());
+          n.stop(t0 + 0.13);
+        }
         break;
       }
       case 'chime':
