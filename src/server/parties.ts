@@ -19,6 +19,7 @@ import {
 } from '../shared/types';
 import { randomAvatar } from '../shared/avatar';
 import { users, type UserRecord } from './store';
+import { analytics } from './analytics';
 import { cleanDisplayName } from './auth';
 import { Game, type GameContext } from './games/base';
 import { DrawGame } from './games/draw';
@@ -44,6 +45,7 @@ interface GameSession {
   participants: string[];
   instance: Game | null;
   results?: GameResults;
+  startedAt?: number;
 }
 
 const GAME_CLASSES: Record<GameType, new (ctx: GameContext, players: string[]) => Game> = {
@@ -113,7 +115,8 @@ export class Party {
     };
   }
 
-  join(socket: Socket, user: UserRecord): { ok: true } | { ok: false; error: string } {
+  /** firstJoin is false when an existing member reconnects or opens a second tab. */
+  join(socket: Socket, user: UserRecord): { ok: true; firstJoin: boolean } | { ok: false; error: string } {
     const existing = this.members.get(user.id);
     if (!existing && this.connectedCount() >= MAX_PLAYERS) return { ok: false, error: 'This party is full! 🎈' };
 
@@ -139,7 +142,7 @@ export class Party {
       socket.to(this.room).emit('player:update', { id: user.id, connected: true, name: existing.name, avatar: existing.avatar });
       if (!wasConnected) this.system(`${existing.name} is back! 👋`);
       this.sendGameTo(user.id);
-      return { ok: true };
+      return { ok: true, firstJoin: false };
     }
 
     const spawn = randomSpawn();
@@ -172,7 +175,7 @@ export class Party {
     socket.to(this.room).emit('sfx', 'join');
     this.system(`${m.name} arrived at the party! 🎉`);
     this.sendGameTo(user.id);
-    return { ok: true };
+    return { ok: true, firstJoin: true };
   }
 
   /** Socket dropped: keep the character around briefly so phones can reconnect seamlessly. */
@@ -333,6 +336,7 @@ export class Party {
     m.chatTimes = m.chatTimes.filter((t) => now - t < 5000);
     if (m.chatTimes.length >= 6) return 'Whoa, slow down! 🐢';
     m.chatTimes.push(now);
+    analytics.track('chat', { uid: pid, ...(typeof to === 'string' && to ? { p: { dm: true } } : {}) });
     const msg: ChatMessage = { id: crypto.randomUUID(), from: pid, fromName: m.name, text: clean, ts: now, kind: 'chat' };
     if (typeof to === 'string' && to) {
       const target = this.members.get(to);
@@ -392,6 +396,7 @@ export class Party {
         session.results = results;
         session.instance?.dispose();
         for (const p of session.participants) users.bumpStats(p, { gamesPlayed: 1, wins: results.winners.includes(p) ? 1 : 0 });
+        analytics.track('game_finished', { p: { game: session.type, ms: Date.now() - (session.startedAt ?? Date.now()) } });
         this.system(`🏆 ${GAMES[session.type].emoji} ${GAMES[session.type].name}: ${results.headline}`);
         for (const w of results.winners) this.emote(w, 'party');
         this.ctxFor(session).sfx(session.participants, 'win');
@@ -457,8 +462,10 @@ export class Party {
     const info = GAMES[g.type];
     if (g.participants.length < info.minPlayers) return `${info.name} needs at least ${info.minPlayers} players.`;
     g.status = 'playing';
+    g.startedAt = Date.now();
     g.instance = new GAME_CLASSES[g.type](this.ctxFor(g), [...g.participants]);
     g.instance.start();
+    analytics.track('game_started', { uids: [...g.participants], p: { game: g.type } });
     this.io.to(this.room).emit('sfx', 'start');
     this.queueGameUpdate();
     return null;
@@ -566,6 +573,20 @@ export class PartyManager {
 
   get(code: unknown) {
     return typeof code === 'string' ? this.parties.get(code.toUpperCase().trim()) : undefined;
+  }
+
+  liveStats() {
+    let playersOnline = 0;
+    let partiesLive = 0;
+    let gamesRunning = 0;
+    for (const p of this.parties.values()) {
+      const n = p.connectedCount();
+      playersOnline += n;
+      if (n === 0) continue;
+      partiesLive++;
+      if (p.game?.status === 'playing') gamesRunning++;
+    }
+    return { playersOnline, partiesLive, gamesRunning };
   }
 
   listPublic(): PartySummary[] {

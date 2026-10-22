@@ -63,6 +63,8 @@ The repo is ready for Railway: `railway.json` builds from the `Dockerfile` and h
 3. Under **Variables**, add `AUTH_SECRET` with a long random value (for example the output of `openssl rand -hex 32`). Railway sets `PORT` for you.
 4. Under **Settings → Networking**, click **Generate Domain** to get a public URL.
 
+To see analytics, add an `ADMIN_KEY` variable (any long secret) and open `https://<your-domain>/admin`. The dashboard shows live players, visitors, sign-ups, where people drop off, games played and where visitors come from. Tag the links you post with `?ref=tiktok`, `?ref=x`, `?ref=youtube` and so on, so each platform shows up separately. Events are kept in `events.jsonl` on the `/data` volume, and no IP addresses, names or messages are stored.
+
 Keep the service at **1 replica**. Parties live in the server's memory, so friends on different replicas wouldn't see each other.
 
 ## Tests
