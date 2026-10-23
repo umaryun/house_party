@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -6,6 +7,8 @@ import { Server } from 'socket.io';
 import { authRouter, verifyToken } from './auth';
 import { PartyManager } from './parties';
 import { users } from './store';
+import { analytics, cleanSource, VISITOR_ID } from './analytics';
+import { computeStats } from './stats';
 import type { Ack } from '../shared/types';
 
 const PORT = Number(process.env.PORT) || 3001;
@@ -25,6 +28,43 @@ const io = new Server(server, {
 const parties = new PartyManager(io);
 
 app.get('/api/parties', (_req, res) => res.json({ parties: parties.listPublic() }));
+
+// ───── analytics ─────
+
+const hits = new Map<string, { n: number; reset: number }>();
+function limited(key: string, max: number) {
+  const now = Date.now();
+  const h = hits.get(key);
+  if (!h || h.reset < now) {
+    hits.set(key, { n: 1, reset: now + 60_000 });
+    if (hits.size > 5000) for (const [k, v] of hits) if (v.reset < now) hits.delete(k);
+    return false;
+  }
+  return ++h.n > max;
+}
+
+/** One anonymous "visit" per browser session: a random visitor id and where they came from. */
+app.post('/api/track', (req, res) => {
+  if (limited(`track:${req.ip}`, 30)) return res.status(429).end();
+  const vid = req.body?.vid;
+  if (typeof vid !== 'string' || !VISITOR_ID.test(vid)) return res.status(400).end();
+  analytics.track('visit', { vid, p: { src: cleanSource(req.body?.src), invite: req.body?.invite === true } });
+  res.status(204).end();
+});
+
+// The dashboard is off unless ADMIN_KEY is set (e.g. as a Railway variable).
+const ADMIN_KEY = process.env.ADMIN_KEY ?? '';
+const keyHash = (k: string) => crypto.createHash('sha256').update(k).digest();
+app.get('/api/admin/stats', (req, res) => {
+  if (!ADMIN_KEY) return res.status(404).json({ error: 'The analytics dashboard is off. Set the ADMIN_KEY variable to turn it on.' });
+  if (limited(`admin:${req.ip}`, 60)) return res.status(429).json({ error: 'Too many requests. Try again in a minute.' });
+  const h = req.headers.authorization;
+  const given = h?.startsWith('Bearer ') ? h.slice(7) : '';
+  if (!crypto.timingSafeEqual(keyHash(given), keyHash(ADMIN_KEY))) return res.status(401).json({ error: 'Wrong admin key.' });
+  const days = Math.min(365, Math.max(1, Math.floor(Number(req.query.days) || 30)));
+  res.set('Cache-Control', 'no-store');
+  res.json(computeStats(analytics.all(), { now: Date.now(), days, live: parties.liveStats() }));
+});
 app.get('/api/parties/:code', (req, res) => {
   const p = parties.get(req.params.code);
   if (!p) return res.status(404).json({ error: 'Party not found' });
@@ -53,6 +93,10 @@ io.on('connection', (socket) => {
     party()?.leave(uid);
     const p = parties.create(user(), data?.name, data?.isPublic);
     const r = p.join(socket, user());
+    if (r.ok) {
+      analytics.track('party_created', { uid, p: { public: p.isPublic } });
+      analytics.track('party_joined', { uid, p: { via: 'host' } });
+    }
     reply(ack, r.ok ? { ok: true, data: { code: p.code } } : r);
   });
 
@@ -63,6 +107,10 @@ io.on('connection', (socket) => {
     const current = party();
     if (current && current !== p) current.leave(uid);
     const r = p.join(socket, user());
+    if (r.ok && r.firstJoin) {
+      const via = ['invite', 'code', 'public'].includes(data?.via) ? data.via : 'code';
+      analytics.track('party_joined', { uid, p: { via } });
+    }
     reply(ack, r.ok ? { ok: true, data: { code: p.code } } : r);
   });
 
@@ -112,10 +160,11 @@ if (fs.existsSync(dist)) {
 
 server.listen(PORT, () => console.log(`🎉 House Party server on http://localhost:${PORT}`));
 
-// Hosts like Railway send SIGTERM on redeploy: save accounts before exiting.
+// Hosts like Railway send SIGTERM on redeploy: save accounts and analytics before exiting.
 for (const sig of ['SIGTERM', 'SIGINT'] as const) {
   process.on(sig, () => {
     users.flush();
+    analytics.flush();
     process.exit(0);
   });
 }

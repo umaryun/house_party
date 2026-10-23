@@ -4,6 +4,10 @@ import path from 'node:path';
 import { Router, type Request } from 'express';
 import { users, toPublic, type UserRecord } from './store';
 import { sanitizeAvatar } from '../shared/avatar';
+import { analytics, VISITOR_ID } from './analytics';
+
+/** Anonymous visitor id the client sends along, so sign-ups can be tied to where visitors came from. */
+const visitorId = (v: unknown) => (typeof v === 'string' && VISITOR_ID.test(v) ? v : undefined);
 
 function loadSecret(): string {
   if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
@@ -91,6 +95,7 @@ authRouter.post('/signup', (req, res) => {
     avatar: null,
     guest: false,
   });
+  analytics.track('signup', { uid: u.id, vid: visitorId(req.body?.vid), p: { guest: false } });
   res.json({ token: signToken(u.id), user: toPublic(u) });
 });
 
@@ -117,6 +122,7 @@ authRouter.post('/guest', (req, res) => {
     avatar: null,
     guest: true,
   });
+  analytics.track('signup', { uid: u.id, vid: visitorId(req.body?.vid), p: { guest: true } });
   res.json({ token: signToken(u.id), user: toPublic(u) });
 });
 
@@ -133,6 +139,7 @@ authRouter.post('/claim', (req, res) => {
   if (users.getByUsername(username)) return res.status(409).json({ error: 'That username is taken.' });
   const salt = crypto.randomBytes(16).toString('hex');
   users.update(u.id, { username: username.toLowerCase(), salt, passHash: hashPassword(password, salt), guest: false });
+  analytics.track('account_saved', { uid: u.id });
   res.json({ user: toPublic(u) });
 });
 
@@ -148,6 +155,7 @@ authRouter.put('/me', (req, res) => {
   const patch: Partial<UserRecord> = {};
   if (req.body?.avatar !== undefined) patch.avatar = sanitizeAvatar(req.body.avatar);
   if (req.body?.displayName !== undefined) patch.displayName = cleanDisplayName(req.body.displayName, u.displayName);
+  if (patch.avatar && !u.avatar) analytics.track('character_created', { uid: u.id });
   const updated = users.update(u.id, patch)!;
   res.json({ user: toPublic(updated) });
 });

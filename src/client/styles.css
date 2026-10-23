@@ -2388,3 +2388,232 @@ h3 {
   font-size: 14px;
   vertical-align: middle;
 }
+
+/* ───────────── admin analytics ───────────── */
+
+.admin {
+  overflow-y: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  --series-1: #3987e5;
+}
+
+.admin-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: calc(18px + var(--safe-t)) 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-h {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.admin code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 0.92em;
+}
+
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.seg button.on {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.tile-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tile-value {
+  font-family: var(--display);
+  font-size: 34px;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.tile-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(61, 220, 151, 0.25);
+}
+
+.admin-card {
+  padding: 18px;
+}
+
+.admin-card h3 {
+  font-size: 18px;
+}
+
+.admin-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.chart {
+  position: relative;
+  width: 100%;
+}
+
+.chart svg {
+  display: block;
+}
+
+.chart .grid {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.chart .axis {
+  fill: var(--muted);
+  font-size: 11px;
+  font-family: var(--font);
+}
+
+.chart .bar {
+  fill: var(--series-1);
+}
+
+.chart .bar.hl {
+  fill: #5598e7;
+}
+
+.chart-tip {
+  position: absolute;
+  width: 130px;
+  pointer-events: none;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  box-shadow: var(--shadow);
+}
+
+.barlist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.barlist-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.barlist-track {
+  height: 10px;
+  border-radius: 0 4px 4px 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.barlist-bar {
+  height: 100%;
+  min-width: 2px;
+  background: var(--series-1);
+  border-radius: 0 4px 4px 0;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.admin-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--panel-solid);
+}
+
+.admin-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-table td:not(:first-child),
+.admin-table th:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

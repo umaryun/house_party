@@ -6,10 +6,11 @@ import { setState, toast, useStore } from '../store';
 import { sound } from '../sound';
 import { Confetti, Modal, Portrait, Toggle } from '../ui/common';
 
-export async function joinParty(code: string) {
+/** via says how they found the party, for analytics: an invite link, a typed code, or the public list. */
+export async function joinParty(code: string, via: 'invite' | 'code' | 'public') {
   sound.unlock();
   try {
-    await request('party:join', { code: code.trim().toUpperCase() });
+    await request('party:join', { code: code.trim().toUpperCase(), via });
     setState({ pendingCode: null });
   } catch (err) {
     setState({ pendingCode: null });
@@ -30,7 +31,7 @@ export function Home() {
   const [claim, setClaim] = useState(false);
 
   useEffect(() => {
-    if (pending && connected) joinParty(pending);
+    if (pending && connected) joinParty(pending, 'invite');
   }, [pending, connected]);
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export function Home() {
     e?.preventDefault();
     if (code.trim().length < 4) return toast('Party codes are 5 characters, like K7XQ2', 'error');
     setBusy(true);
-    await joinParty(code);
+    await joinParty(code, 'code');
     setBusy(false);
   };
 
@@ -152,7 +153,7 @@ export function Home() {
           ) : (
             <div className="party-list">
               {parties.map((p) => (
-                <div key={p.code} className="party-tile" onClick={() => joinParty(p.code)}>
+                <div key={p.code} className="party-tile" onClick={() => joinParty(p.code, 'public')}>
                   <div className="name">{p.name}</div>
                   <div className="muted small">Hosted by {p.hostName}</div>
                   <div className="row wrap" style={{ gap: 6 }}>
